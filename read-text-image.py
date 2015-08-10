@@ -2,9 +2,9 @@ import argparse
 import json
 from PIL import Image
 
-parser = argparse.ArgumentParser(description='Provide a path to an image containing text')
-parser.add_argument('image', help='Path to the image file')
-args = parser.parse_args()
+##################################################################
+#                          Methods
+##################################################################
 
 ###############
 # Convert a set of 2D data into rows
@@ -44,9 +44,9 @@ def getRowData(data,width):
 def getColData(rows):
 	cols = []
 
-	for j in range(0,len(rows[0])-1):
+	for j in range(0,len(rows[0])):
 		col = []
-		for i in range(0,len(rows)-1):
+		for i in range(0,len(rows)):
 			col.append(rows[i][j])
 		cols.append(col)
 
@@ -89,35 +89,95 @@ def getChars(cols):
 	return chars
 
 
+#############
+#
+# trainedChars = { 'A' : char[0] , 'B' : char[1] }
+#
+#######
+def trainChars(imageChars,textChars):
 
-print("Hello World! Here is my file: " + args.image)
+	trainedChars = {}
 
-im = Image.open(args.image).convert('L')
+	for i in range(0,len(imageChars)):
+		trainedChars[textChars[i]] = imageChars[i]
 
-print(im.format, im.size, im.mode)
+	return trainedChars
 
-imgWidth, imgHeight = im.size
+#################
+#
+# parse the image for characters
+#
+########
+def parseImage(imageFile):
 
-pixels = list(im.getdata())
+	print("Reading image : " + imageFile)
 
-rows = getRowData(pixels,imgWidth)
-cols = getColData(rows)
-chars = getChars(cols)
+	im = Image.open(imageFile).convert('L')
+	print("-----------------")
+	print("-- Image stats --")
+	print("-----------------")
+	print(im.format, im.size, im.mode)
+	print("-----------------")
 
-print("Detected " + str(len(chars)) + "characters")
+	imgWidth, imgHeight = im.size
 
-print("Values for the letter A:")
-print(chars[0])
+	pixels = list(im.getdata())
 
-f = open('training_chars.json', 'w')
+	rows = getRowData(pixels,imgWidth)
+	cols = getColData(rows)
+	chars = getChars(cols)
 
-jsonChars = []
-for i in range(0,len(chars)):
-	for j in range(0,len(chars[i])):
-		jsonChars.append(chars[i][j])
-	jsonChars.append(255)
-	jsonChars.append(255)
+	print("Detected " + str(len(chars)) + " characters!\n")
 
-f.write(json.dumps(jsonChars))
+	return chars
 
+#################
+#
+# dump characters to json
+#
+########
+def dumpCharsToJSON(filename,chars):
+	f = open('training_chars.json', 'w')
+	jsonChars = []
+	for i in range(0,len(chars)):
+		for j in range(0,len(chars[i])):
+			jsonChars.append(chars[i][j])
+		jsonChars.append(255)
+		jsonChars.append(255)
+
+	f.write(json.dumps(jsonChars))
+	f.close()
+
+#####################
+#
+# Score the test data with the trained data set
+#
+##############
+#def scoreData(testChars,trainedChars):
+
+
+
+
+##################################################################
+#                          Main
+##################################################################
+
+parser = argparse.ArgumentParser(description='Provide a path to an image containing text')
+parser.add_argument('trainImage', help='Path to the training image file')
+parser.add_argument('testImage', help='Path to the test image file')
+args = parser.parse_args()
+
+print("Parsing the training image...")
+chars = parseImage(args.trainImage)
+
+
+print("Associating characters to training image...")
+f = open('./training-data/char-associations.txt', 'r')
+associatedChars = list(f.read())
 f.close()
+print("Number of chars to associate: " + str(len(associatedChars)) + "\n")
+
+trainedChars = trainChars(chars,associatedChars)
+
+print("Parsing the training image...")
+chars = parseImage(args.testImage)
