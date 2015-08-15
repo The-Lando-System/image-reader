@@ -137,7 +137,7 @@ def parseImage(imageFile):
 #
 ########
 def dumpCharsToJSON(filename,chars):
-	f = open('training_chars.json', 'w')
+	f = open(filename, 'w')
 	jsonChars = []
 	for i in range(0,len(chars)):
 		for j in range(0,len(chars[i])):
@@ -152,10 +152,63 @@ def dumpCharsToJSON(filename,chars):
 #
 # Score the test data with the trained data set
 #
+# scoreTable = { 'H' : scores, 'e' : scores }
+# scores = [ score1 (char A), score2, score3, ..., score66]
+#
 ##############
-#def scoreData(testChars,trainedChars):
+def scoreData(testChars,trainedChars):
 
 
+	charString = ''
+
+	
+	for i in range(0,len(testChars)):
+
+		minVal = 100000
+		matchedChar = ''
+
+		for key, value in trainedChars.items():
+
+			penalty = 0
+
+			if (len(testChars[i]) < len(value)):
+				charLength = len(testChars[i])
+			else:
+				charLength = len(value)
+
+			if (len(testChars[i]) == len(value)):
+				penalty = 0
+			else:
+				penalty = 100
+
+			score = 0
+			totalDiff = 0
+
+			for k in range(0,charLength):
+				
+				if (k > 0):
+
+					testDiff = abs( testChars[i][k] - testChars[i][k-1] )
+					trainDiff = abs( value[k] - value[k-1] )
+
+					totalDiff = totalDiff + abs(testDiff - trainDiff)
+
+
+			score = ( totalDiff / (charLength-1) ) + penalty 
+
+			if (score < minVal):
+				minVal = score
+				matchedChar = key
+
+		print("Best score was the letter: " + matchedChar)
+		print("With a score of: " + str(minVal))
+
+
+		charString = charString + matchedChar
+
+	print("Detected the following string: ")
+	print(charString)
+	
 
 
 ##################################################################
@@ -168,8 +221,8 @@ parser.add_argument('testImage', help='Path to the test image file')
 args = parser.parse_args()
 
 print("Parsing the training image...")
-chars = parseImage(args.trainImage)
-
+trainingChars = parseImage(args.trainImage)
+dumpCharsToJSON('training-chars.json',trainingChars)
 
 print("Associating characters to training image...")
 f = open('./training-data/char-associations.txt', 'r')
@@ -177,7 +230,10 @@ associatedChars = list(f.read())
 f.close()
 print("Number of chars to associate: " + str(len(associatedChars)) + "\n")
 
-trainedChars = trainChars(chars,associatedChars)
+trainedChars = trainChars(trainingChars,associatedChars)
 
-print("Parsing the training image...")
-chars = parseImage(args.testImage)
+print("Parsing the test image...")
+testChars = parseImage(args.testImage)
+dumpCharsToJSON('test-chars.json',testChars)
+
+scoreData(testChars,trainedChars)
